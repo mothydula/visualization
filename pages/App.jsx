@@ -187,6 +187,10 @@ const App = ({ data, aggregatedData, turnPage, isForwardDisabled, isBackDisabled
     },
   ]);
 
+  if (!process.browser) {
+    return <div>LOADING</div>
+  }
+
   return <Styles>
     <MapContainer style={{ height: "45vh", width: "75vw" }} zoom={7} center={[34.9582, -116.4194]}>
       <GeoJSON data={countries.features} />
