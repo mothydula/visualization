@@ -3,13 +3,25 @@ import styled from 'styled-components'
 import { useTable, useFilters } from 'react-table'
 import { TextSearchFilter } from "./filters";
 import { matchSorterFn } from "./sorting";
-import { MapContainer, GeoJSON, Marker, Popup } from 'react-leaflet'
+//import { MapContainer, GeoJSON, Marker, Popup } from 'react-leaflet'
 import countries from './countries.json';
 import ReactGeoJSON from "react-geojson";
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet';
 
+const MapContainer = dynamic(() => import('react-leaflet').then((module) => module.MapContainer), {
+  ssr: false,
+});
+const GeoJSON = dynamic(() => import('react-leaflet').then((module) => module.GeoJSON), {
+  ssr: false,
+});
+const Marker = dynamic(() => import('react-leaflet').then((module) => module.Marker), {
+  ssr: false,
+});
+const Popup = dynamic(() => import('react-leaflet').then((module) => module.Popup), {
+  ssr: false,
+});
 //Style for app
 const Styles = styled.div`
   padding: 1rem;
