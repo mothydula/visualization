@@ -187,7 +187,7 @@ const App = ({ data, aggregatedData, turnPage, isForwardDisabled, isBackDisabled
     },
   ]);
 
-  if (!process.browser) {
+  if (typeof window === 'undefined') {
     return <div>LOADING</div>
   }
 
