@@ -111,6 +111,9 @@ function Table({ columns, data, sortOptions }) {
 }
 
 const App = ({ data, aggregatedData, turnPage, isForwardDisabled, isBackDisabled }) => {
+  if (typeof window !== undefined) {
+
+  }
   const MapContainer = dynamic(() => import('react-leaflet').then((module) => module.MapContainer), {
     ssr: false,
   });
@@ -192,7 +195,7 @@ const App = ({ data, aggregatedData, turnPage, isForwardDisabled, isBackDisabled
     return <div>LOADING</div>
   }
 
-  return <Styles>
+  return (typeof window !== undefined ? (<Styles>
     <MapContainer style={{ height: "45vh", width: "75vw" }} zoom={7} center={[34.9582, -116.4194]}>
       <GeoJSON data={countries.features} />
       {Object.keys(aggregatedData).map((key) =>
@@ -208,7 +211,7 @@ const App = ({ data, aggregatedData, turnPage, isForwardDisabled, isBackDisabled
     <Table columns={columns} data={data} sortOptions={[{ id: "average_price_price_sqft", desc: false }, { id: "bath", desc: false }]} />
     <button disabled={isBackDisabled} onClick={() => turnPage("BACK")}>PREV PAGE</button>
     <button disabled={isForwardDisabled} onClick={() => turnPage("FORWARD")}>NEXT PAGE</button>
-  </Styles>;
+  </Styles>) : null);
 };
 
 export default App;
