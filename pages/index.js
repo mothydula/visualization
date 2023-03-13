@@ -1,115 +1,133 @@
-import Head from 'next/head';
-import styles from '../styles/Home.module.css';
+import React from "react";
+import dynamic from "next/dynamic";
+const { parse } = require("csv-parse");
+const axios = require("axios");
+import fs from "fs";
+import path, { resolve } from "path";
+import { useMemo, useState } from "react";
 
-export default function Home() {
+const FIELDS = [
+  "image_id",
+  "street",
+  "citi",
+  "n_citi",
+  "bed",
+  "bath",
+  "sqft",
+  "price",
+  "price_sqft",
+  "counts_locations",
+  "average_price_price_sqft",
+];
+
+const AppWithNoSSR = dynamic(() => import("./App"), {
+  ssr: false,
+});
+//Load the CSV file
+const loadFile = async () =>
+  new Promise((resolve, reject) => {
+    let data = [];
+    const fullPath = path.join(__dirname, "../pages");
+    console.log(fullPath);
+    const filePath = path.join(process.cwd(), "socal2.csv");
+
+    fs.createReadStream(filePath)
+      .pipe(parse({ delimiter: ",", from_line: 2 }))
+      .on("data", function (row) {
+        let initialValue = {};
+        let object = row.reduce((obj, item, index) => {
+          return {
+            ...obj,
+            [`${FIELDS[index]}`]: item.trim().trim('"'),
+          };
+        }, initialValue);
+        data.push(object);
+      })
+      .on("end", () => {
+        resolve(data);
+      });
+  });
+
+//Add delay to API requests
+const wait = (ms) => {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+};
+
+const aggregateData = async (data) => {
+  const cityToAggregations = {};
+  let promises = [];
+  let cities = []; //Keep track of logged cities
+
+  for (let line of data) {
+    if (!cities.includes(line["citi"])) {
+      cities.push(line["citi"]);
+      let params = {
+        address: line["citi"],
+        key: "AIzaSyBaOiP4FtxmCuuoBBahBB4W6X2M404-WRM",
+      };
+
+      //Store promise of API calls
+      promises.push(
+        axios
+          .get("https://maps.googleapis.com/maps/api/geocode/json", {
+            params,
+          })
+          .then((response) => {
+            cityToAggregations[line["citi"]] = {
+              n_citi: line["n_citi"],
+              average_price_price_sqft: line["average_price_price_sqft"],
+              latitude: response.data.results[0].geometry.location.lat,
+              longitude: response.data.results[0].geometry.location.lng,
+            };
+            wait(5000);
+          })
+          .catch((error) => console.log(`YA BROKE ${error}`))
+      );
+    }
+  }
+
+  //Resolve API calls
+  return Promise.all(promises).then(() => cityToAggregations);
+};
+
+export async function getServerSideProps() {
+  let data = await loadFile(); //Table data
+  let aggregatedData = await aggregateData(data); //Map data
+  return {
+    props: { data, aggregatedData },
+  };
+}
+
+export default function Home({ data, aggregatedData }) {
+  const [currentPage, setCurrentPage] = useState(0);
+
+  //Paginate table
+  const onPageTurn = (direction) => {
+    if (direction == "FORWARD") {
+      console.log("HI");
+      setCurrentPage((old) => old + 25);
+    } else {
+      setCurrentPage((old) => (old - 25 >= 0 ? old - 25 : 0));
+    }
+  };
+
+  const isForwardDisabled = useMemo(() => {
+    let future = currentPage + 25;
+    return future >= data.length;
+  }, [currentPage]);
+  const isBackDisabled = useMemo(() => {
+    return currentPage == 0;
+  }, [currentPage]);
+
   return (
-    <div className={styles.container}>
-      <Head>
-        <title>Create Next App</title>
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-
-      <main>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
-
-        <p className={styles.description}>
-          Get started by editing <code>pages/index.js</code>
-        </p>
-
-        <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h3>Documentation &rarr;</h3>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h3>Learn &rarr;</h3>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className={styles.card}
-          >
-            <h3>Examples &rarr;</h3>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-          >
-            <h3>Deploy &rarr;</h3>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
-        </div>
-      </main>
-
-      <footer>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <img src="/vercel.svg" alt="Vercel" className={styles.logo} />
-        </a>
-      </footer>
-
-      <style jsx>{`
-        main {
-          padding: 5rem 0;
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-        }
-        footer {
-          width: 100%;
-          height: 100px;
-          border-top: 1px solid #eaeaea;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        footer img {
-          margin-left: 0.5rem;
-        }
-        footer a {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          text-decoration: none;
-          color: inherit;
-        }
-        code {
-          background: #fafafa;
-          border-radius: 5px;
-          padding: 0.75rem;
-          font-size: 1.1rem;
-          font-family: Menlo, Monaco, Lucida Console, Liberation Mono,
-            DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace;
-        }
-      `}</style>
-
-      <style jsx global>{`
-        html,
-        body {
-          padding: 0;
-          margin: 0;
-          font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
-            Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue,
-            sans-serif;
-        }
-        * {
-          box-sizing: border-box;
-        }
-      `}</style>
-    </div>
-  )
+    <AppWithNoSSR
+      data={data.slice(currentPage, currentPage + 25)}
+      aggregatedData={aggregatedData}
+      turnPage={(direction) => onPageTurn(direction)}
+      isForwardDisabled={isForwardDisabled}
+      isBackDisabled={isBackDisabled}
+    />
+  );
 }
