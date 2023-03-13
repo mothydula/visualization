@@ -111,8 +111,8 @@ function Table({ columns, data, sortOptions }) {
 }
 
 const App = ({ data, aggregatedData, turnPage, isForwardDisabled, isBackDisabled }) => {
-  if (typeof window !== undefined) {
-
+  if (typeof window === undefined) {
+    return <div>LOADING</div>
   }
   const MapContainer = dynamic(() => import('react-leaflet').then((module) => module.MapContainer), {
     ssr: false,
